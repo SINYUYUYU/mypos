@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一朵芸 POS 系統</title>
+    <!-- 載入核心庫 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            overscroll-behavior-y: contain; /* 防止手機下拉重新整理 */
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #D8C4B6; border-radius: 10px; }
+        button { touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-[#F5EFE7]">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // 預設產品與分類
+        const INITIAL_PRODUCTS = [
+          { id: 1, name: '伯爵奶茶', price: 65, category: '飲品', icon: '🧋' },
+          { id: 2, name: '燕麥拿鐵', price: 85, category: '飲品', icon: '☕' },
+          { id: 3, name: '焦糖布丁', price: 75, category: '甜點', icon: '🍮' },
+          { id: 4, name: '提拉米蘇', price: 120, category: '甜點', icon: '🍰' },
+          { id: 5, name: '法式吐司', price: 180, category: '輕食', icon: '🍞' },
+        ];
+
+        const INITIAL_CATEGORIES = ['飲品', '甜點', '輕食', '主食'];
+
+        // 優化圖標渲染邏輯，使用 render function 確保 React 穩定性
+        const Icon = ({ name, size = 18, className = "" }) => {
+            const renderPath = (iconName) => {
+                switch (iconName) {
+                    case 'LayoutGrid':
+                        return <g><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" /></g>;
+                    case 'ShoppingCart':
+                        return <g><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></g>;
+                    case 'History':
+                        return <g><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></g>;
+                    case 'Settings':
+                        return <g><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></g>;
+                    case 'Clock':
+                        return <g><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></g>;
+                    case 'Plus':
+                        return <g><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></g>;
+                    case 'Minus':
+                        return <g><line x1="5" y1="12" x2="19" y2="12"/></g>;
+                    case 'CloudLightning':
+                        return <g><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/><path d="m13 12-3 5h4l-3 5"/></g>;
+                    default:
+                        return null;
+                }
+            };
+
+            return (
+                <svg 
+                    width={size} 
+                    height={size} 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className={className}
+                >
+                    {renderPath(name)}
+                </svg>
+            );
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('pos');
+            const [products, setProducts] = useState(INITIAL_PRODUCTS);
+            const [categories] = useState(INITIAL_CATEGORIES);
+            const [cart, setCart] = useState([]);
+            const [activeCategory, setActiveCategory] = useState('全部');
+            const [transactions, setTransactions] = useState([]);
+            const [showReceipt, setShowReceipt] = useState(null);
+            const [isStoreOpen, setIsStoreOpen] = useState(false);
+            const [nextOrderNumber, setNextOrderNumber] = useState(1);
+            const [syncUrl, setSyncUrl] = useState('');
+            const [isSyncing, setIsSyncing] = useState(false);
+            const [alertMsg, setAlertMsg] = useState(null);
+            const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+
+            const triggerAlert = (type, text) => {
+                setAlertMsg({ type, text });
+                setTimeout(() => setAlertMsg(null), 3000);
+            };
+
+            const handleCheckout = () => {
+                if (cart.length === 0) return;
+                const orderNo = nextOrderNumber.toString().padStart(3, '0');
+                const newTxn = {
+                    id: Date.now(),
+                    orderNo: `#${orderNo}`,
+                    items: [...cart],
+                    total: cart.reduce((s, i) => s + (i.price * i.quantity), 0),
+                    timestamp: new Date().toLocaleString(),
+                    status: 'pending'
+                };
+                setTransactions([newTxn, ...transactions]);
+                setShowReceipt(newTxn);
+                setCart([]);
+                setNextOrderNumber(n => n + 1);
+            };
+
+            const executeSync = async () => {
+                if (!syncUrl) {
+                    triggerAlert('error', '請先設定同步網址');
+                    setActiveTab('admin');
+                    setShowSyncConfirm(false);
+                    return;
+                }
+                setShowSyncConfirm(false);
+                setIsSyncing(true);
+                try {
+                    const data = transactions.map(t => ({
+                        time: t.timestamp,
+                        no: t.orderNo,
+                        items: t.items.map(i => `${i.name}x${i.quantity}`).join(','),
+                        total: t.total
+                    }));
+                    await fetch(syncUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+                    setTransactions([]);
+                    triggerAlert('success', '同步成功並已清空歷史');
+                } catch (e) {
+                    triggerAlert('error', '同步失敗');
+                } finally {
+                    setIsSyncing(false);
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-screen max-h-screen overflow-hidden">
+                    {/* 頂部導覽列：點擊右側齒輪圖標即可進入設定網址頁面 */}
+                    <nav className="bg-white border-b border-[#D8C4B6] px-4 py-3 flex justify-between items-center shrink-0 shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-[#A67B5B] p-1.5 rounded-lg text-white">
+                                <Icon name="LayoutGrid" size={20} />
+                            </div>
+                            <span className="font-black text-lg text-stone-800">一朵芸</span>
+                        </div>
+                        <div className="flex bg-[#F5F5F5] p-1 rounded-xl">
+                            <button onClick={()=>setActiveTab('pos')} title="點餐界面" className={`p-2 rounded-lg transition-colors ${activeTab==='pos'?'bg-[#A67B5B] text-white':'text-[#A67B5B]'}`}>
+                                <Icon name="ShoppingCart" />
+                            </button>
+                            <button onClick={()=>setActiveTab('history')} title="成交紀錄" className={`p-2 rounded-lg transition-colors ${activeTab==='history'?'bg-[#A67B5B] text-white':'text-[#A67B5B]'}`}>
+                                <Icon name="History" />
+                            </button>
+                            <button onClick={()=>setActiveTab('admin')} title="系統設定(在此設定網址)" className={`p-2 rounded-lg transition-colors ${activeTab==='admin'?'bg-[#A67B5B] text-white border-2 border-white':'text-[#A67B5B]'}`}>
+                                <Icon name="Settings" />
+                            </button>
+                        </div>
+                    </nav>
+
+                    <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                        {activeTab === 'pos' ? (
+                            <>
+                                <div className="flex-1 p-4 overflow-y-auto custom-scrollbar relative">
+                                    {!isStoreOpen && (
+                                        <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                                            <Icon name="Clock" size={48} className="text-[#A67B5B] mb-4" />
+                                            <h2 className="text-xl font-bold mb-4">尚未開啟營業</h2>
+                                            <div className="flex flex-col gap-3">
+                                                <button onClick={() => {setIsStoreOpen(true); setNextOrderNumber(1);}} className="bg-[#A67B5B] text-white px-8 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-transform">開啟收銀</button>
+                                                <button onClick={() => setActiveTab('admin')} className="text-[#A67B5B] text-sm font-bold underline">前往設定專屬網址</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                                        <button onClick={()=>setActiveCategory('全部')} className={`px-4 py-2 rounded-lg whitespace-nowrap text-sm font-bold transition-all ${activeCategory==='全部'?'bg-[#A67B5B] text-white shadow-md':'bg-white border border-[#D8C4B6] text-stone-600'}`}>全部</button>
+                                        {categories.map(c => (
+                                            <button key={c} onClick={()=>setActiveCategory(c)} className={`px-4 py-2 rounded-lg whitespace-nowrap text-sm font-bold transition-all ${activeCategory===c?'bg-[#A67B5B] text-white shadow-md':'bg-white border border-[#D8C4B6] text-stone-600'}`}>{c}</button>
+                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {products.filter(p => activeCategory==='全部'||p.category===activeCategory).map(p => (
+                                            <button key={p.id} onClick={()=>{
+                                                setCart(prev => {
+                                                    const exist = prev.find(i=>i.id===p.id);
+                                                    if(exist) return prev.map(i=>i.id===p.id?{...i, quantity:i.quantity+1}:i);
+                                                    return [...prev, {...p, quantity:1}];
+                                                });
+                                            }} className="bg-white p-4 rounded-2xl border-2 border-transparent active:border-[#A67B5B] shadow-sm flex flex-col items-center hover:shadow-md transition-shadow">
+                                                <span className="text-3xl mb-2">{p.icon}</span>
+                                                <span className="font-bold text-sm text-stone-800">{p.name}</span>
+                                                <span className="text-[#A67B5B] font-black">${p.price}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="w-full md:w-80 bg-white border-t md:border-t-0 md:border-l border-[#D8C4B6] flex flex-col h-1/3 md:h-full">
+                                    <div className="p-3 border-b font-bold flex justify-between items-center">
+                                        <span className="text-stone-700">購物車 ({cart.length})</span>
+                                        <button onClick={()=>setCart([])} className="text-xs text-red-500 font-medium">清空</button>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-stone-50/30">
+                                        {cart.map(item => (
+                                            <div key={item.id} className="flex justify-between items-center bg-white border border-stone-100 p-2 rounded-xl shadow-sm">
+                                                <div className="text-sm font-bold text-stone-800">{item.name}</div>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={()=>{
+                                                        setCart(prev => prev.map(i=>i.id===item.id?{...i, quantity:Math.max(1, i.quantity-1)}:i));
+                                                    }} className="w-7 h-7 bg-stone-50 rounded-lg flex items-center justify-center border border-stone-200 active:bg-stone-200">
+                                                        <Icon name="Minus" size={12}/>
+                                                    </button>
+                                                    <span className="font-black w-4 text-center text-stone-700">{item.quantity}</span>
+                                                    <button onClick={()=>{
+                                                        setCart(prev => prev.map(i=>i.id===item.id?{...i, quantity:i.quantity+1}:i));
+                                                    }} className="w-7 h-7 bg-stone-50 rounded-lg flex items-center justify-center border border-stone-200 active:bg-stone-200">
+                                                        <Icon name="Plus" size={12}/>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-4 bg-white border-t">
+                                        <button disabled={cart.length===0} onClick={handleCheckout} className="w-full bg-[#A67B5B] text-white py-4 rounded-xl font-black shadow-lg disabled:opacity-50 active:scale-95 transition-all">
+                                            結帳 (${cart.reduce((s,i)=>s+(i.price*i.quantity),0)})
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        ) : activeTab === 'history' ? (
+                            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-stone-800">訂單管理</h2>
+                                    <button onClick={()=>setShowSyncConfirm(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md active:scale-95">
+                                        <Icon name="CloudLightning" size={16}/> 雲端同步
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
+                                    {transactions.map(t => (
+                                        <div key={t.id} className="bg-white p-4 rounded-2xl border border-[#D8C4B6] flex justify-between items-center shadow-sm">
+                                            <div>
+                                                <div className="font-black text-lg text-stone-800">{t.orderNo} <span className="text-xs font-normal text-stone-400 ml-2">{t.timestamp}</span></div>
+                                                <div className="text-xs text-stone-500 mt-1">{t.items.map(i=>`${i.name}x${i.quantity}`).join(', ')}</div>
+                                            </div>
+                                            <div className="text-xl font-black text-[#A67B5B]">${t.total}</div>
+                                        </div>
+                                    ))}
+                                    {transactions.length === 0 && (
+                                        <div className="text-center py-20 flex flex-col items-center">
+                                            <div className="bg-stone-100 p-4 rounded-full mb-4">
+                                                <Icon name="History" size={32} className="text-stone-300" />
+                                            </div>
+                                            <p className="text-stone-400 font-medium italic">目前尚無成交訂單</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            /* 系統設定分頁：請在此處輸入您的 Google Apps Script 網址 */
+                            <div className="flex-1 p-4 overflow-y-auto">
+                                <h2 className="text-xl font-bold mb-6 text-stone-800 tracking-tight flex items-center gap-2">
+                                    <Icon name="Settings" className="text-[#A67B5B]" /> 系統設定
+                                </h2>
+                                <div className="bg-white p-6 rounded-2xl border-2 border-[#D8C4B6] shadow-sm">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="bg-blue-100 p-1.5 rounded-full text-blue-600">
+                                            <Icon name="CloudLightning" size={16} />
+                                        </div>
+                                        <label className="block text-sm font-black text-stone-700">Google Apps Script 網址設定</label>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        className="w-full p-4 bg-stone-50 rounded-xl border-2 border-stone-200 mb-4 text-sm focus:border-[#A67B5B] focus:bg-white outline-none transition-all placeholder:text-stone-300" 
+                                        placeholder="請貼上您的專屬連結 (https://script.google.com/...)"
+                                        value={syncUrl}
+                                        onChange={(e)=>setSyncUrl(e.target.value)}
+                                    />
+                                    <div className="text-xs leading-relaxed text-amber-800 bg-amber-50 p-4 rounded-xl border border-amber-200">
+                                        <p className="font-black mb-2 flex items-center gap-1">⚠️ 操作指南：</p>
+                                        <ul className="list-disc ml-4 space-y-1 opacity-90">
+                                            <li>在此欄位貼上您從 Google 試算表取得的部署網址。</li>
+                                            <li>設定完成後，切換至「成交紀錄」即可看到「雲端同步」按鈕。</li>
+                                            <li><b>注意：</b>同步成功後，為了確保手機效能，系統會自動清空本機的所有訂單。</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {alertMsg && (
+                        <div className={`fixed top-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl z-[1000] text-white font-bold flex items-center gap-2 animate-bounce ${alertMsg.type==='error'?'bg-red-500':'bg-green-600'}`}>
+                            {alertMsg.text}
+                        </div>
+                    )}
+
+                    {showReceipt && (
+                        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[900] flex items-center justify-center p-6">
+                            <div className="bg-white w-full max-w-xs rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                                <div className="bg-[#A67B5B] text-white p-8 text-center">
+                                    <div className="text-xs opacity-80 mb-1 uppercase tracking-widest font-bold">Order Number</div>
+                                    <div className="text-6xl font-black tracking-tighter">{showReceipt.orderNo}</div>
+                                </div>
+                                <div className="p-6">
+                                    <div className="text-center font-black mb-4 text-stone-400 tracking-widest">一朵芸點餐明細</div>
+                                    <div className="space-y-3 mb-6 max-h-40 overflow-y-auto px-2 custom-scrollbar">
+                                        {showReceipt.items.map((i,idx)=>(
+                                            <div key={idx} className="flex justify-between text-sm font-medium text-stone-700">
+                                                <span>{i.name} <span className="text-stone-400 ml-1">x{i.quantity}</span></span>
+                                                <span className="font-bold">${i.price*i.quantity}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="border-t border-dashed border-stone-200 pt-4 flex justify-between font-black text-2xl mb-8 text-stone-800">
+                                        <span>總計</span><span>${showReceipt.total}</span>
+                                    </div>
+                                    <button onClick={()=>setShowReceipt(null)} className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black shadow-lg active:scale-95 transition-transform">完成並關閉</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showSyncConfirm && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[900] flex items-center justify-center p-6 text-center">
+                            <div className="bg-white p-8 rounded-[2.5rem] max-w-xs shadow-2xl border-4 border-blue-50">
+                                <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Icon name="CloudLightning" size={32} className="text-blue-500" />
+                                </div>
+                                <h3 className="font-black text-xl mb-2 text-stone-800">確認要雲端同步？</h3>
+                                <p className="text-sm text-stone-500 mb-8 leading-relaxed">同步成功後，本機的所有成交紀錄將會被刪除清空，請確認資料已上傳至試算表。</p>
+                                <div className="space-y-3">
+                                    <button onClick={executeSync} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-transform">確定同步上傳</button>
+                                    <button onClick={()=>setShowSyncConfirm(false)} className="w-full py-2 text-stone-400 font-bold hover:text-stone-600">暫時取消</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
+    </script>
+</body>
+</html>
